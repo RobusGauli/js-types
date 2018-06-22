@@ -29,7 +29,7 @@ function undefinedContract(func) {
     }
   };
 }
-
+// // 
 function Type(type) {
   return function(validationRule) {
     function validate(data) {
