@@ -7,7 +7,7 @@
 const String = undefinedContract(Type("string"));
 const Number = Type("number");
 const Boolean = Type("boolean");
-
+//
 function errorHandler(errorType) {
   return {
     error: true,
