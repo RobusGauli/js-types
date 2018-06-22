@@ -49,4 +49,4 @@ function main() {
   console.log(String({}).validate('this is the value'));
 }
 
-main();
+main()
