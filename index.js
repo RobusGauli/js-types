@@ -58,16 +58,22 @@ const symbolContract = primitiveChecker.register("symbol")(function(value) {
   if (typeof value !== "symbol") {
     return typeError("symbol", typeof value);
   }
-  return success(value)
+  return success(value);
 });
 
-const objectContract = primitiveChecker.register('object')(function(value) {
-  if (typeof value !== 'object') {
-    return typeError('object', typeof value)
+const objectContract = primitiveChecker.register("object")(function(value) {
+  if (typeof value !== "object") {
+    return typeError("object", typeof value);
   }
-  return success(value)
+  return success(value);
 });
 
+const listContract = primitiveChecker.register('list')(function (value) {
+  if (!Array.isArray(value)) {
+    return typeError('array', typeof value);
+  }
+  return success(value);
+})
 function success(value) {
   return {
     error: null,
@@ -112,7 +118,7 @@ function object(validationSchema) {
         return success(payload);
       }
 
-      const validationResult = primitiveChecker.dispatch('object')(payload);
+      const validationResult = primitiveChecker.dispatch("object")(payload);
 
       if (validationResult.error) {
         return validationResult;
@@ -150,26 +156,72 @@ function object(validationSchema) {
   };
 }
 
+function all(args) {
+  if (!Array.isArray(args)) {
+    throw new TypeError('Argument must be of type array.');
+  }
+
+  return args.reduce((acc, val) => acc && val, true);
+}
+
+function list(validationSchema) {
+  let optional = false;
+  return {
+    validate: function(payload) {
+      if (optional && (payload === undefined || payload === null)) {
+        // safely return from the validation
+        return success(payload);
+      }
+      const validationResult = primitiveChecker.dispatch('list')(payload);
+      if (validationResult.error) {
+        return validationResult;
+      }
+      
+     
+      const res = payload.reduce((acc, val, index) => {
+        const {error, value} = validationSchema.validate(val);
+        return error !== null
+          ? {...acc, [index]: {error: error, value: value}}
+          : {...acc}
+      }, {})
+     
+      if (all(Object.values(res).map(v => v.error === null))) {
+        return {
+          error: null,
+          value: payload
+        }
+      }
+      return {
+        error: res,
+        value: null
+      }
+    }
+  }
+}
+
 function main() {
   // here we validate the js objects types
   const payload = {
     name: "s",
     age: 3,
-    // detail: {
-    //   lastName: "ss"
-    // }
+    friends: ['2', 's', '']
   };
 
   const schema = object({
+    friends: list(string()),
     name: string().optional(),
     age: number().optional(),
     detail: object({
       firstName: number().optional(),
       lastName: number().optional()
-    }).optional()
+    }).optional(),
   });
   const { error, value } = schema.validate(payload);
-  console.log(error);
-  console.log(value);
+   console.log(error);
+   console.log(value);
+  // const friends = [3, 4, 5];
+  // const schema = list(string());
+  // const result = schema.validate(friends)
+  // console.log(result)
 }
 main();
