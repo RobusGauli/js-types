@@ -37,7 +37,7 @@ const stringContract = primitiveChecker.register("string")(function(value) {
 });
 
 const numberContract = primitiveChecker.register("number")(function(value) {
-  if (isNaN(value) && typeof value === 'number') {
+  if (isNaN(value) && typeof value === "number") {
     return typeError("number", "NaN");
   }
 
@@ -58,6 +58,14 @@ const symbolContract = primitiveChecker.register("symbol")(function(value) {
   if (typeof value !== "symbol") {
     return typeError("symbol", typeof value);
   }
+  return success(value)
+});
+
+const objectContract = primitiveChecker.register('object')(function(value) {
+  if (typeof value !== 'object') {
+    return typeError('object', typeof value)
+  }
+  return success(value)
 });
 
 function success(value) {
@@ -95,26 +103,31 @@ function primitiveType(type) {
 }
 
 function object(validationSchema) {
-  let optional = true;
+  let optional = false;
   return {
     validate: function(payload) {
       // here we write our validation rule
       if (optional && (payload === undefined || payload === null)) {
         //safely return
-        return success(value)
+        return success(payload);
       }
 
+      const validationResult = primitiveChecker.dispatch('object')(payload);
+
+      if (validationResult.error) {
+        return validationResult;
+      }
       const errorPayload = {};
       const valuePayload = {};
       Object.keys(validationSchema).forEach(key => {
         const validation = validationSchema[key];
         if (
-          typeof validation !== 'object' || 
+          typeof validation !== "object" ||
           validation === null ||
           !validation.validate ||
-          typeof validation.validate !== 'function'
+          typeof validation.validate !== "function"
         ) {
-          throw new TypeError(`Invalid schema for ${key}`)
+          throw new TypeError(`Invalid schema for ${key}`);
         }
         const val = payload[key];
 
@@ -126,12 +139,8 @@ function object(validationSchema) {
         }
       });
       return {
-        error: Object.keys(errorPayload).length
-          ? errorPayload
-          : null,
-        value: Object.keys(valuePayload).length
-          ? valuePayload
-          : null
+        error: Object.keys(errorPayload).length ? errorPayload : null,
+        value: Object.keys(valuePayload).length ? valuePayload : null
       };
     },
     optional: function() {
@@ -144,24 +153,23 @@ function object(validationSchema) {
 function main() {
   // here we validate the js objects types
   const payload = {
-    name: 's',
+    name: "s",
     age: 3,
-    detail: {
-      firstName: 's',
-      lastName: 'ss'
-    }
+    // detail: {
+    //   lastName: "ss"
+    // }
   };
 
   const schema = object({
     name: string().optional(),
     age: number().optional(),
     detail: object({
-      firstName: number(),
-      lastName: number()
-    })
+      firstName: number().optional(),
+      lastName: number().optional()
+    }).optional()
   });
   const { error, value } = schema.validate(payload);
   console.log(error);
-  console.log(value)
+  console.log(value);
 }
 main();
