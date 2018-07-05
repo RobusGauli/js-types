@@ -7,6 +7,7 @@
 const string = primitiveType("string");
 const number = primitiveType("number");
 const boolean = primitiveType("boolean");
+const symbol = primitiveType('symbol');
 
 function success(value) {
   return {
