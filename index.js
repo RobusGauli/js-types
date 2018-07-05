@@ -4,67 +4,44 @@
  * This module provides the helper functions to validate your primitives in JS
  */
 
-function string() {
-  let optional = false;
+const string = primitiveType("string");
+const number = primitiveType("number");
+const boolean = primitiveType("boolean");
+
+function success(value) {
   return {
-    validate: function(value) {
-      // we need to validate here is if the value is of type string
-      if (
-        optional &&
-        value === undefined
-      ) {
-        return {
-          error: null,
-          value: value
-        }
-      }
-      if (typeof value !== "string") {
-        return {
-          error: `${value} must be of type string`,
-          value: null
-        };
-      }
-      return {
-        error: null,
-        value: value
-      };
-    },
-    optional: function() {
-      optional = true;
-      return this;
-    }
+    error: null,
+    value: value
   };
 }
 
-function number() {
-  let optional = false;
+function typeError(expected, actual) {
   return {
-    validate: function(value) {
-      if (
-        optional &&
-        value === undefined
-      ) {
-        return {
-          error: null,
-          value: value
+    error: `Expected ${expected} but got ${typeof actual}`,
+    value: null
+  };
+}
+
+function primitiveType(type) {
+  return function() {
+    let optional = false;
+    return {
+      validate: function(value) {
+        if (optional && (value === undefined || value === null)) {
+          // safely return
+          return success(value);
         }
-      }
-      if (typeof value !== 'number') {
-        return {
-          error: `${value} must be of type number.`,
-          value: null
+
+        if (typeof value !== type) {
+          return typeError(type, value);
         }
+      },
+      optional: function() {
+        optional = true;
+        return this;
       }
-      return {
-        error: null,
-        value: value
-      }
-    },
-    optional: function() {
-      optional = true;
-      return this;
-    }
-  }
+    };
+  };
 }
 
 function object(validationSchema) {
@@ -99,7 +76,7 @@ function object(validationSchema) {
 function main() {
   // here we validate the js objects types
   const payload = {
-    name: 's'
+    name: 3
   };
 
   const schema = object({
