@@ -7,7 +7,58 @@
 const string = primitiveType("string");
 const number = primitiveType("number");
 const boolean = primitiveType("boolean");
-const symbol = primitiveType('symbol');
+const symbol = primitiveType("symbol");
+
+function primitiveCheckerRegistry() {
+  // registry to maintain type and contract
+  let registry = {};
+  return {
+    register: function(type) {
+      return function(func) {
+        registry[type] = func;
+        return func;
+      };
+    },
+    dispatch: function(type) {
+      return function(value) {
+        return registry[type](value);
+      };
+    }
+  };
+}
+
+const primitiveChecker = primitiveCheckerRegistry();
+
+const stringContract = primitiveChecker.register("string")(function(value) {
+  if (typeof value !== "string") {
+    return typeError("string", typeof value);
+  }
+  return success(value);
+});
+
+const numberContract = primitiveChecker.register("number")(function(value) {
+  if (isNaN(value) && typeof value === 'number') {
+    return typeError("number", "NaN");
+  }
+
+  if (typeof value !== "number") {
+    return typeError("number", typeof value);
+  }
+  return success(value);
+});
+
+const booleanContract = primitiveChecker.register("boolean")(function(value) {
+  if (typeof value !== "boolean") {
+    return typeError("boolean", typeof value);
+  }
+  return success(value);
+});
+
+const symbolContract = primitiveChecker.register("symbol")(function(value) {
+  if (typeof value !== "symbol") {
+    return typeError("symbol", typeof value);
+  }
+});
 
 function success(value) {
   return {
@@ -18,7 +69,7 @@ function success(value) {
 
 function typeError(expected, actual) {
   return {
-    error: `Expected ${expected} but got ${typeof actual}`,
+    error: `Expected ${expected} but got ${actual}`,
     value: null
   };
 }
@@ -33,9 +84,9 @@ function primitiveType(type) {
           return success(value);
         }
 
-        if (typeof value !== type) {
-          return typeError(type, value);
-        }
+        return primitiveChecker.dispatch(type)(value);
+
+        return success(value);
       },
       optional: function() {
         optional = true;
@@ -77,7 +128,8 @@ function object(validationSchema) {
 function main() {
   // here we validate the js objects types
   const payload = {
-    name: 3
+    name: 3,
+    age: 's'
   };
 
   const schema = object({
@@ -85,6 +137,7 @@ function main() {
     age: number().optional()
   });
   const { error, value } = schema.validate(payload);
-  console.log(error, value);
+  console.log(error);
+  
 }
 main();
