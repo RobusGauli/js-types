@@ -4,49 +4,109 @@
  * This module provides the helper functions to validate your primitives in JS
  */
 
-const String = undefinedContract(Type("string"));
-const Number = Type("number");
-const Boolean = Type("boolean");
-//
-function errorHandler(errorType) {
+function string() {
+  let optional = false;
   return {
-    error: true,
-    type: errorType
-  };
-}
-
-function undefinedContract(func) {
-  return function(validationRule) {
-    const oldFunction = func(validationRule);
-    function validate(data) {
-      if (data === undefined || data.toString() === "undefined") {
-        return errorHandler("undefined");
+    validate: function(value) {
+      // we need to validate here is if the value is of type string
+      if (
+        optional &&
+        value === undefined
+      ) {
+        return {
+          error: null,
+          value: value
+        }
       }
-      return oldFunction(data);
-    };
-    return {
-      validate
+      if (typeof value !== "string") {
+        return {
+          error: `${value} must be of type string`,
+          value: null
+        };
+      }
+      return {
+        error: null,
+        value: value
+      };
+    },
+    optional: function() {
+      optional = true;
+      return this;
     }
   };
 }
-// // 
-function Type(type) {
-  return function(validationRule) {
-    function validate(data) {
-      // first check if the data has undefined
+
+function number() {
+  let optional = false;
+  return {
+    validate: function(value) {
+      if (
+        optional &&
+        value === undefined
+      ) {
+        return {
+          error: null,
+          value: value
+        }
+      }
+      if (typeof value !== 'number') {
+        return {
+          error: `${value} must be of type number.`,
+          value: null
+        }
+      }
       return {
-        error: false,
-        result: null
+        error: null,
+        value: value
+      }
+    },
+    optional: function() {
+      optional = true;
+      return this;
+    }
+  }
+}
+
+function object(validationSchema) {
+  return {
+    validate: function(payload) {
+      // here we write our validation rule
+      if (typeof payload !== "object" || payload === null) {
+        throw new Error("Payload must be of type object.");
+      }
+
+      const errorPayload = {};
+      const valuePayload = {};
+      Object.keys(validationSchema).forEach(key => {
+        const validation = validationSchema[key];
+        const val = payload[key];
+
+        const { error, value } = validation.validate(val);
+        if (error !== null) {
+          errorPayload[key] = error;
+        } else {
+          valuePayload[key] = value;
+        }
+      });
+      return {
+        error: errorPayload,
+        value: valuePayload
       };
-    };
-    return {
-      validate,
     }
   };
 }
 
 function main() {
-  console.log(String({}).validate('this is the value'));
-}
+  // here we validate the js objects types
+  const payload = {
+    name: 's'
+  };
 
-main()
+  const schema = object({
+    name: string().optional(),
+    age: number().optional()
+  });
+  const { error, value } = schema.validate(payload);
+  console.log(error, value);
+}
+main();
