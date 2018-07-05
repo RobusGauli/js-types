@@ -85,8 +85,6 @@ function primitiveType(type) {
         }
 
         return primitiveChecker.dispatch(type)(value);
-
-        return success(value);
       },
       optional: function() {
         optional = true;
@@ -97,17 +95,27 @@ function primitiveType(type) {
 }
 
 function object(validationSchema) {
+  let optional = true;
   return {
     validate: function(payload) {
       // here we write our validation rule
-      if (typeof payload !== "object" || payload === null) {
-        throw new Error("Payload must be of type object.");
+      if (optional && (payload === undefined || payload === null)) {
+        //safely return
+        return success(value)
       }
 
       const errorPayload = {};
       const valuePayload = {};
       Object.keys(validationSchema).forEach(key => {
         const validation = validationSchema[key];
+        if (
+          typeof validation !== 'object' || 
+          validation === null ||
+          !validation.validate ||
+          typeof validation.validate !== 'function'
+        ) {
+          throw new TypeError(`Invalid schema for ${key}`)
+        }
         const val = payload[key];
 
         const { error, value } = validation.validate(val);
@@ -118,9 +126,17 @@ function object(validationSchema) {
         }
       });
       return {
-        error: errorPayload,
-        value: valuePayload
+        error: Object.keys(errorPayload).length
+          ? errorPayload
+          : null,
+        value: Object.keys(valuePayload).length
+          ? valuePayload
+          : null
       };
+    },
+    optional: function() {
+      optional = true;
+      return this;
     }
   };
 }
@@ -128,16 +144,24 @@ function object(validationSchema) {
 function main() {
   // here we validate the js objects types
   const payload = {
-    name: 3,
-    age: 's'
+    name: 's',
+    age: 3,
+    detail: {
+      firstName: 's',
+      lastName: 'ss'
+    }
   };
 
   const schema = object({
     name: string().optional(),
-    age: number().optional()
+    age: number().optional(),
+    detail: object({
+      firstName: number(),
+      lastName: number()
+    })
   });
   const { error, value } = schema.validate(payload);
   console.log(error);
-  
+  console.log(value)
 }
 main();
