@@ -73,11 +73,14 @@ function primitiveType(type) {
 }
 
 function object(validationSchema) {
-  let optional = false;
   return {
+    _type: 'object',
+    _optional: false,
+    _minLength: null,
+    _maxLength: null,
     validate: function(payload) {
       // here we write our validation rule
-      if (optional && (payload === undefined || payload === null)) {
+      if (this._optional && (payload === undefined || payload === null)) {
         //safely return
         return success(payload);
       }
@@ -85,6 +88,16 @@ function object(validationSchema) {
       const value = primitiveTypeCheck(payload, "object");
       if (value.error) {
         return value;
+      }
+      // before validating each item we first validate the length
+      if (this._minLength !== null || this._maxLength !== null) {
+        const lengthResult = lengthCheck(Object.keys(payload), {
+          minLength: this._minLength,
+          maxLength: this._maxLength
+        }, this._type);
+        if (lengthResult.error) {
+          return lengthResult;
+        }
       }
       const errorPayload = {};
       const valuePayload = {};
@@ -113,12 +126,14 @@ function object(validationSchema) {
       };
     },
     optional: function() {
-      optional = true;
+      this._optional = true;
       return this;
-    }
+    },
+    ...LengthMixins
   };
 }
-// goes to util
+// goes to util in future
+
 function all(args) {
   if (!Array.isArray(args)) {
     throw new TypeError("Argument must be of type array.");
@@ -126,52 +141,92 @@ function all(args) {
 
   return args.reduce((acc, val) => acc && val, true);
 }
-function lengthError(value, lengthSchema, minFailed) {
+function lengthError(type, lengthSchema, minFailed) {
   if (minFailed) {
     return {
-      error: `${getType(value)} must have minimum length of ${lengthSchema.minLength}`,
+      error: `${type} must have minimum length of ${
+        lengthSchema.minLength
+      }`,
       value: null
-    }
+    };
   }
   return {
-    error: `${getType(value)} must have maximum length of ${lengthSchema.maxLength}`,
+    error: `${type} must have maximum length of ${
+      lengthSchema.maxLength
+    }`,
     value: null
-  }
+  };
 }
 
-function lengthCheck(value, lengthSchema) {
+
+function lengthCheck(value, lengthSchema, type) {
   if (!Array.isArray(value)) {
     throw new TypeError(`${value} must be of type Array.`);
   }
   if (
-    lengthSchema.minLength !== null && 
-    getType(lengthSchema.minLength) === 'number' &&
+    lengthSchema.minLength !== null &&
+    getType(lengthSchema.minLength) === "number" &&
     value.length < lengthSchema.minLength
   ) {
-    return lengthError(value, lengthSchema, true)
+    return lengthError(type, lengthSchema, true);
   }
 
   const maxLength = lengthSchema.maxLength;
   if (
     maxLength !== null &&
-    getType(maxLength) === 'number' &&
+    getType(maxLength) === "number" &&
     value.length > maxLength
   ) {
-    return lengthError(value, lengthSchema, false);
+    return lengthError(type, lengthSchema, false);
   }
 
   return success(value);
 }
 
+const LengthMixins = {
+  minLength: function(length) {
+    const lengthType = getType(length);
+    if (lengthType !== "number") {
+      throw new TypeError(
+        `Argument to the minLength must be of type number but got ${lengthType}.`
+      );
+    }
+    if (this._maxLength !== null && this._minLength >= this._maxLength) {
+      throw new Error(
+        "Min length must be less than Max Length. Length Mismatch."
+      );
+    }
+    this._minLength = length;
+    return this;
+  },
+  maxLength: function(length) {
+    const lengthType = getType(length);
+    if (lengthType !== "number") {
+      throw new TypeError(
+        `Argument to the minLength must be of type numner but got ${lengthType}.`
+      );
+    }
+
+    if (this._minLength !== null && length <= this._minLength) {
+      throw new Error(
+        "Max length must be greater than Min Length. Length Mismatch."
+      );
+    }
+
+    this._maxLength = length;
+    return this;
+  }
+}
 
 function list(validationSchema) {
-  let optional = false;
-  let minLength = null;
-  let maxLength = null;
 
   return {
+    _type: 'array',
+    _optional: false,
+    _minLength: null,
+    _maxLength: null,
     validate: function(payload) {
-      if (optional && (payload === undefined || payload === null)) {
+      if (this._optional && (payload === undefined || payload === null)) {
         // safely return from the validation
         return success(payload);
       }
@@ -182,11 +237,11 @@ function list(validationSchema) {
       }
 
       // before validating each item we irst validate the length
-      if (
-        minLength !== null ||
-        maxLength !== null
-      ) {
-        const lengthResult =  lengthCheck(payload, {minLength: minLength, maxLength: maxLength});
+      if (this._minLength !== null || this._maxLength !== null) {
+        const lengthResult = lengthCheck(payload, {
+          minLength: this._minLength,
+          maxLength: this._maxLength
+        });
         if (lengthResult.error) {
           return lengthResult;
         }
@@ -213,30 +268,7 @@ function list(validationSchema) {
       optional = true;
       return this;
     },
-    minLength: function(length) {
-      const lengthType = getType(length);
-      if (lengthType !== 'number') {
-        throw new TypeError(`Argument to the minLength must be of type number but got ${lengthType}.`);
-      }
-      if (maxLength !== null && minLength >= maxLength) {
-        throw new Error('Min length must be less than Max Length. Length Mismatch.');
-      }
-      minLength = length;
-      return this;
-    },
-    maxLength: function(length) {
-      const lengthType = getType(length);
-      if (lengthType !== 'number') {
-        throw new TypeError(`Argument to the minLength must be of type numner but got ${lengthType}.`);
-      }
-      
-      if (minLength !== null && length <= minLength) {
-        throw new Error('Max length must be greater than Min Length. Length Mismatch.');
-      }
-
-      maxLength = length;
-      return this;
-    }
+    ...LengthMixins
   };
 }
 
@@ -245,22 +277,17 @@ function main() {
   const payload = {
     name: "s",
     age: undefined,
-    friends: [ {name: 'sd', age: 3}],
-    detail: {}
+    friends: [{ name: "sd", age: 3 }]
   };
 
   const schema = object({
-    friends: list(object({
-      name: string(),
-      age: number().optional()
-    })).minLength(2),
     name: string().optional(),
     age: number().optional(),
     detail: object({
       firstName: number().optional(),
       lastName: number().optional()
     }).optional()
-  });
+  }).minLength(4);
   const { error, value } = schema.validate(payload);
   console.log(error);
   console.log(value);
