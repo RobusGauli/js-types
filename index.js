@@ -9,71 +9,35 @@ const number = primitiveType("number");
 const boolean = primitiveType("boolean");
 const symbol = primitiveType("symbol");
 
-function primitiveCheckerRegistry() {
-  // registry to maintain type and contract
-  let registry = {};
-  return {
-    register: function(type) {
-      return function(func) {
-        registry[type] = func;
-        return func;
-      };
-    },
-    dispatch: function(type) {
-      return function(value) {
-        return registry[type](value);
-      };
-    }
-  };
+function getType(value) {
+  let val = `${value}`;
+  if (isNaN(value) && val === "NaN") {
+    return "NaN";
+  }
+
+  if (value === undefined && val === "undefined") {
+    return "undefined";
+  }
+
+  if (value === null && val === "null") {
+    return "null";
+  }
+
+  if (Array.isArray(value)) {
+    return "array";
+  }
+
+  return typeof value;
 }
 
-const primitiveChecker = primitiveCheckerRegistry();
-
-const stringContract = primitiveChecker.register("string")(function(value) {
-  if (typeof value !== "string") {
-    return typeError("string", typeof value);
+function primitiveTypeCheck(value, type) {
+  const actualType = getType(value);
+  if (actualType !== type) {
+    return typeError(type, actualType);
   }
   return success(value);
-});
+}
 
-const numberContract = primitiveChecker.register("number")(function(value) {
-  if (isNaN(value) && typeof value === "number") {
-    return typeError("number", "NaN");
-  }
-
-  if (typeof value !== "number") {
-    return typeError("number", typeof value);
-  }
-  return success(value);
-});
-
-const booleanContract = primitiveChecker.register("boolean")(function(value) {
-  if (typeof value !== "boolean") {
-    return typeError("boolean", typeof value);
-  }
-  return success(value);
-});
-
-const symbolContract = primitiveChecker.register("symbol")(function(value) {
-  if (typeof value !== "symbol") {
-    return typeError("symbol", typeof value);
-  }
-  return success(value);
-});
-
-const objectContract = primitiveChecker.register("object")(function(value) {
-  if (typeof value !== "object") {
-    return typeError("object", typeof value);
-  }
-  return success(value);
-});
-
-const listContract = primitiveChecker.register('list')(function (value) {
-  if (!Array.isArray(value)) {
-    return typeError('array', typeof value);
-  }
-  return success(value);
-})
 function success(value) {
   return {
     error: null,
@@ -98,7 +62,7 @@ function primitiveType(type) {
           return success(value);
         }
 
-        return primitiveChecker.dispatch(type)(value);
+        return primitiveTypeCheck(value, type);
       },
       optional: function() {
         optional = true;
@@ -118,10 +82,9 @@ function object(validationSchema) {
         return success(payload);
       }
 
-      const validationResult = primitiveChecker.dispatch("object")(payload);
-
-      if (validationResult.error) {
-        return validationResult;
+      const value = primitiveTypeCheck(payload, "object");
+      if (value.error) {
+        return value;
       }
       const errorPayload = {};
       const valuePayload = {};
@@ -158,7 +121,7 @@ function object(validationSchema) {
 
 function all(args) {
   if (!Array.isArray(args)) {
-    throw new TypeError('Argument must be of type array.');
+    throw new TypeError("Argument must be of type array.");
   }
 
   return args.reduce((acc, val) => acc && val, true);
@@ -172,39 +135,39 @@ function list(validationSchema) {
         // safely return from the validation
         return success(payload);
       }
-      const validationResult = primitiveChecker.dispatch('list')(payload);
-      if (validationResult.error) {
-        return validationResult;
+      const value = primitiveTypeCheck(payload, "array");
+
+      if (value.error) {
+        return value;
       }
-      
-     
+
       const res = payload.reduce((acc, val, index) => {
-        const {error, value} = validationSchema.validate(val);
+        const { error, value } = validationSchema.validate(val);
         return error !== null
-          ? {...acc, [index]: {error: error, value: value}}
-          : {...acc}
-      }, {})
-     
+          ? { ...acc, [index]: { error: error, value: value } }
+          : { ...acc };
+      }, {});
+
       if (all(Object.values(res).map(v => v.error === null))) {
         return {
           error: null,
           value: payload
-        }
+        };
       }
       return {
         error: res,
         value: null
-      }
+      };
     }
-  }
+  };
 }
 
 function main() {
   // here we validate the js objects types
   const payload = {
     name: "s",
-    age: 3,
-    friends: ['2', 's', '']
+    age: undefined,
+    friends: ["2", "s", "s"]
   };
 
   const schema = object({
@@ -214,14 +177,11 @@ function main() {
     detail: object({
       firstName: number().optional(),
       lastName: number().optional()
-    }).optional(),
+    }).optional()
   });
   const { error, value } = schema.validate(payload);
-   console.log(error);
-   console.log(value);
-  // const friends = [3, 4, 5];
-  // const schema = list(string());
-  // const result = schema.validate(friends)
-  // console.log(result)
+  console.log(error);
+  console.log(value);
+ 
 }
 main();
