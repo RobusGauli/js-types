@@ -118,7 +118,7 @@ function object(validationSchema) {
     }
   };
 }
-
+// goes to util
 function all(args) {
   if (!Array.isArray(args)) {
     throw new TypeError("Argument must be of type array.");
