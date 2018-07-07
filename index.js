@@ -1,7 +1,8 @@
 /**
  * index.js
  * ~~~~~~~~~~~
- * This module provides the helper functions to validate your primitives in JS
+ * This module provides the helper functions to validate your primitives in JS.
+ 
  */
 
 const string = primitiveType("string");
@@ -291,6 +292,8 @@ function main() {
   const { error, value } = schema.validate(payload);
   console.log(error);
   console.log(value);
+  
+  
 }
 
 main();
