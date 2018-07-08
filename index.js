@@ -75,7 +75,7 @@ function primitiveType(type) {
 
 function object(validationSchema) {
   return {
-    _type: 'object',
+    _type: "object",
     _optional: false,
     _minLength: null,
     _maxLength: null,
@@ -92,10 +92,14 @@ function object(validationSchema) {
       }
       // before validating each item we first validate the length
       if (this._minLength !== null || this._maxLength !== null) {
-        const lengthResult = lengthCheck(Object.keys(payload), {
-          minLength: this._minLength,
-          maxLength: this._maxLength
-        }, this._type);
+        const lengthResult = lengthCheck(
+          Object.keys(payload),
+          {
+            minLength: this._minLength,
+            maxLength: this._maxLength
+          },
+          this._type
+        );
         if (lengthResult.error) {
           return lengthResult;
         }
@@ -145,20 +149,15 @@ function all(args) {
 function lengthError(type, lengthSchema, minFailed) {
   if (minFailed) {
     return {
-      error: `${type} must have minimum length of ${
-        lengthSchema.minLength
-      }`,
+      error: `${type} must have minimum length of ${lengthSchema.minLength}`,
       value: null
     };
   }
   return {
-    error: `${type} must have maximum length of ${
-      lengthSchema.maxLength
-    }`,
+    error: `${type} must have maximum length of ${lengthSchema.maxLength}`,
     value: null
   };
 }
-
 
 function lengthCheck(value, lengthSchema, type) {
   if (!Array.isArray(value)) {
@@ -217,12 +216,11 @@ const LengthMixins = {
     this._maxLength = length;
     return this;
   }
-}
+};
 
 function list(validationSchema) {
-
   return {
-    _type: 'array',
+    _type: "array",
     _optional: false,
     _minLength: null,
     _maxLength: null,
@@ -242,7 +240,7 @@ function list(validationSchema) {
         const lengthResult = lengthCheck(payload, {
           minLength: this._minLength,
           maxLength: this._maxLength
-        });
+        }, this._type);
         if (lengthResult.error) {
           return lengthResult;
         }
@@ -278,7 +276,7 @@ function main() {
   const payload = {
     name: "s",
     age: undefined,
-    friends: [{ name: "sd", age: 3 }]
+    friends: [{ name: 1, age: 3 }]
   };
 
   const schema = object({
@@ -287,8 +285,9 @@ function main() {
     detail: object({
       firstName: number().optional(),
       lastName: number().optional()
-    }).optional()
-  }).minLength(4);
+    }).optional(),
+    friends: list(object({name: string(), age: number()})).minLength(3)
+  }).minLength(1);
   const { error, value } = schema.validate(payload);
   console.log(error);
   console.log(value);
