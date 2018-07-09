@@ -132,6 +132,13 @@ function number() {
           return includeStringValidation;
         }
       }
+      // check for infinity
+      if (payload === Infinity) {
+        return {
+          error: 'Expected number but got Infinity.Invalid!',
+          value: null
+        }
+      }
       const parsableNumber = parseFloat(payload);
       const value = primitiveTypeCheck(parsableNumber, this._type);
       if (value.error) {
@@ -511,11 +518,9 @@ function main() {
   // console.log(r);
 
   const n = number()
-    .max(10)
-    .min(2)
     .optional()
     .toFloat(2);
-  const { error, value } = n.validate("3.3123123");
+  const { error, value } = n.validate(Infinity);
   console.log(error, value);
 }
 
