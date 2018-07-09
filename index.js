@@ -11,6 +11,7 @@ const number = () => new NumberState();
 const string = () => new StringState();
 const object = validationSchema => new ObjectState(validationSchema)
 const list = validationSchema => new ListState(validationSchema)
+const any = () => new AnyState();
 
 function getType(value) {
   let val = `${value}`;
@@ -75,7 +76,7 @@ function primitiveType(type) {
   };
 }
 
-function any(args) {
+function _any(args) {
   if (getType(args) !== "array") {
     throw new TypeError("Must be of type number");
   }
@@ -105,7 +106,7 @@ function checkForString(value) {
       : true;
   });
 
-  if (any(codePointsFlag)) {
+  if (_any(codePointsFlag)) {
     return typeError("number", "string");
   }
   // also check for ".34." that is more than one "."
@@ -150,6 +151,33 @@ const LengthMixins = {
   }
 };
 
+function AnyState() {
+  this._optional = false;
+  this._allowUndefinedNull = false;
+}
+
+AnyState.prototype = {
+  validate: function(payload) {
+    if (this._optional && (payload === undefined || payload === null)) {
+      return success(payload);
+    }
+
+    const actualType = getType(payload);
+    if (!this._allowUndefinedNull && (actualType === 'undefined' || actualType === 'null')) {
+      return typeError('any', actualType);
+    }
+    return success(payload);
+
+  },
+  optional: function() {
+    this._optional = true;
+    return this;
+  },
+  allowUndefinedNull: function() {
+    this._allowUndefinedNull = true;
+    return this;
+  }
+}
 function NumberState() {
   this._type = "number";
   this._optional = false;
@@ -508,14 +536,14 @@ ListState.prototype = {
 function main() {
   //  here we validate the js objects types
   const schema = object({
-    name: string().optional().minLength(2),
-    age: number().min(2).max(10).toFloat(2),
-    friends: list(string()).optional().minLength(2)
+    data: object({
+      layers: list(any()).minLength(2)
+    })
   })
   const payload = {
-    name: 'sd',
-    age: NaN,
-    friends: ['asd', 'fas']
+    data: {
+      layers: [2, 2]
+    }
   }
   const { error, value } = schema.validate(payload);
   console.log(error, value)
