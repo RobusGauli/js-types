@@ -9,10 +9,15 @@ const boolean = primitiveType("boolean");
 const symbol = primitiveType("symbol");
 const number = () => new NumberState();
 const string = () => new StringState();
-const object = validationSchema => new ObjectState(validationSchema)
-const list = validationSchema => new ListState(validationSchema)
+const object = validationSchema => new ObjectState(validationSchema);
+const list = validationSchema => new ListState(validationSchema);
 const any = () => new AnyState();
-
+/**
+ * Returns the precise type of any value
+ * 
+ * @param {any} value 
+ * @returns {string} 
+ */
 function getType(value) {
   let val = `${value}`;
   if (isNaN(value) && val === "NaN") {
@@ -163,11 +168,13 @@ AnyState.prototype = {
     }
 
     const actualType = getType(payload);
-    if (!this._allowUndefinedNull && (actualType === 'undefined' || actualType === 'null')) {
-      return typeError('any', actualType);
+    if (
+      !this._allowUndefinedNull &&
+      (actualType === "undefined" || actualType === "null")
+    ) {
+      return typeError("any", actualType);
     }
     return success(payload);
-
   },
   optional: function() {
     this._optional = true;
@@ -177,7 +184,7 @@ AnyState.prototype = {
     this._allowUndefinedNull = true;
     return this;
   }
-}
+};
 function NumberState() {
   this._type = "number";
   this._optional = false;
@@ -539,14 +546,14 @@ function main() {
     data: object({
       layers: list(any()).minLength(2)
     })
-  })
+  });
   const payload = {
     data: {
       layers: [2, 2]
     }
-  }
+  };
   const { error, value } = schema.validate(payload);
-  console.log(error, value)
+  console.log(error, value);
 }
 
 main();
