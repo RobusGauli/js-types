@@ -12,6 +12,7 @@ const string = () => new StringState();
 const object = validationSchema => new ObjectState(validationSchema);
 const list = validationSchema => new ListState(validationSchema);
 const any = () => new AnyState();
+
 /**
  * Returns the precise type of any value
  * 
@@ -39,6 +40,14 @@ function getType(value) {
   return typeof value;
 }
 
+/**
+ * Checks the value with the type and returns the result payload.
+ * 
+ * @param {any} value 
+ * @param {string} type 
+ * 
+ * @return {object}
+ */
 function primitiveTypeCheck(value, type) {
   const actualType = getType(value);
   if (actualType !== type) {
@@ -54,6 +63,14 @@ function success(value) {
   };
 }
 
+/**
+ * Formats the error payload.
+ * 
+ * @param {string} expected 
+ * @param {string} actual 
+ * 
+ * @returns {object}
+ */
 function typeError(expected, actual) {
   return {
     error: `Expected ${expected} but got ${actual}`,
@@ -61,6 +78,13 @@ function typeError(expected, actual) {
   };
 }
 
+/**
+ * Factory function for boolean and symbol primitives.
+ * 
+ * @param {string} type 
+ * 
+ * @returns {function}
+ */
 function primitiveType(type) {
   return function() {
     return {
@@ -81,6 +105,13 @@ function primitiveType(type) {
   };
 }
 
+/**
+ * Returns true if any of the value is true on the list.
+ * 
+ * @param {array} args 
+ * 
+ * @returns {boolean} 
+ */
 function _any(args) {
   if (getType(args) !== "array") {
     throw new TypeError("Must be of type number");
@@ -88,17 +119,39 @@ function _any(args) {
 
   return args.reduce((acc, val) => acc || val, false);
 }
-
+/**
+ * Converts any parsable value to rounded integer.
+ * 
+ * @param {any} value 
+ * 
+ * @returns {integer}
+ */
 function convertToInteger(value) {
   // value might be string i.e parsable number, integer, float
   return Math.round(parseFloat(value));
 }
 
+/**
+ * Converts any value to float given the precision value.
+ * 
+ * @param {any} value 
+ * @param {number} decimalPlaces 
+ * 
+ * @returns {float}
+ */
 function convertToFloat(value, decimalPlaces) {
   // value might be string i.e parsable fnumber, integer, float
   return parseFloat(parseFloat(value).toFixed(decimalPlaces));
 }
 
+/**
+ * Checks weather the number represented in string has unparsable codepoints
+ * and returns the appropriate result payload.
+ * 
+ * @param {string} value
+ * 
+ * @returns {object}
+ */
 function checkForString(value) {
   let dotCount = 0;
   const codePointsFlag = Object.values(value).map((_, index) => {
@@ -121,6 +174,9 @@ function checkForString(value) {
   return success(value);
 }
 
+/**
+ * Length mixins for string, array and object.
+ */
 const LengthMixins = {
   minLength: function(length) {
     const lengthType = getType(length);
