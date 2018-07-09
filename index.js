@@ -80,14 +80,13 @@ function any(args) {
 }
 
 function convertToInteger(value) {
-  // value might be string i.e parsable number, integer, float 
+  // value might be string i.e parsable number, integer, float
   return Math.round(parseFloat(value));
 }
 
 function convertToFloat(value, decimalPlaces) {
   // value might be string i.e parsable fnumber, integer, float
-  console.log('h')
-  return parseFloat(parseFloat(value).toFixed(decimalPlaces))
+  return parseFloat(parseFloat(value).toFixed(decimalPlaces));
 }
 
 function checkForString(value) {
@@ -107,7 +106,7 @@ function checkForString(value) {
   }
   // also check for ".34." that is more than one "."
   if (dotCount > 1) {
-    return typeError('number', 'string');
+    return typeError("number", "string");
   }
   return success(value);
 }
@@ -153,7 +152,7 @@ function number() {
         }
       }
       let convertedPayload = payload;
-      
+
       if (this._toInteger) {
         convertedPayload = convertToInteger(payload);
       } else if (this._toFloat) {
@@ -192,23 +191,26 @@ function number() {
     toInteger: function() {
       // check to see if _toFloat is true
       if (this._toFloat) {
-        throw new Error('Invalid Conversion scheme. Cannot be both float and integer.')
+        throw new Error(
+          "Invalid Conversion scheme. Cannot be both float and integer."
+        );
       }
       this._toInteger = true;
       return this;
     },
-    toFloat: function(decimalPlaces=3) {
+    toFloat: function(decimalPlaces = 3) {
       if (this._toInteger) {
-          throw new Error('Invalid conversion scheme. Cannot be both integer and float.');
+        throw new Error(
+          "Invalid conversion scheme. Cannot be both integer and float."
+        );
       }
-      if (getType(decimalPlaces) !== 'number') {
+      if (getType(decimalPlaces) !== "number") {
         throw new TypeError('Invalid argument to function "toFloat".');
       }
       this._toFloat = true;
       this._decimalPlaces = decimalPlaces;
       return this;
     }
-
   };
 }
 function string() {
@@ -512,6 +514,7 @@ function main() {
     .max(10)
     .min(2)
     .optional()
+    .toFloat(2);
   const { error, value } = n.validate("3.3123123");
   console.log(error, value);
 }
