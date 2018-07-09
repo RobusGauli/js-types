@@ -5,7 +5,6 @@
  
  */
 
-const string = primitiveType("string");
 const number = primitiveType("number");
 const boolean = primitiveType("boolean");
 const symbol = primitiveType("symbol");
@@ -55,10 +54,10 @@ function typeError(expected, actual) {
 
 function primitiveType(type) {
   return function() {
-    let optional = false;
     return {
+      _optional: false,
       validate: function(value) {
-        if (optional && (value === undefined || value === null)) {
+        if (this._optional && (value === undefined || value === null)) {
           // safely return
           return success(value);
         }
@@ -66,13 +65,52 @@ function primitiveType(type) {
         return primitiveTypeCheck(value, type);
       },
       optional: function() {
-        optional = true;
+        this._optional = true;
         return this;
       }
     };
   };
 }
 
+function string() {
+  return {
+    _type: "string",
+    _optional: false,
+    _minLength: null,
+    _maxLength: null,
+    validate: function(payload) {
+      if (this._optional && (payload === undefined || payload === null)) {
+        return success(payload);
+      }
+
+      const value = primitiveTypeCheck(payload, this._type);
+      if (value.error) {
+        return value;
+      }
+
+      if (this._minLength !== null || this._maxLength !== null) {
+        const lengthResult = lengthCheck(
+          Object.values(payload),
+          {
+            minLength: this._minLength,
+            maxLength: this._maxLength
+          },
+          this._type
+        );
+
+        if (lengthResult.error) {
+          return lengthResult;
+        }
+      }
+      return success(payload);
+    },
+    optional: function() {
+      this._optional = true;
+      return this;
+    },
+    ...LengthMixins
+  };
+}
 function object(validationSchema) {
   return {
     _type: "object",
@@ -237,10 +275,14 @@ function list(validationSchema) {
 
       // before validating each item we irst validate the length
       if (this._minLength !== null || this._maxLength !== null) {
-        const lengthResult = lengthCheck(payload, {
-          minLength: this._minLength,
-          maxLength: this._maxLength
-        }, this._type);
+        const lengthResult = lengthCheck(
+          payload,
+          {
+            minLength: this._minLength,
+            maxLength: this._maxLength
+          },
+          this._type
+        );
         if (lengthResult.error) {
           return lengthResult;
         }
@@ -264,7 +306,7 @@ function list(validationSchema) {
       };
     },
     optional: function() {
-      optional = true;
+      this._optional = true;
       return this;
     },
     ...LengthMixins
@@ -274,25 +316,25 @@ function list(validationSchema) {
 function main() {
   // here we validate the js objects types
   const payload = {
-    name: "s",
-    age: undefined,
-    friends: [{ name: 1, age: 3 }]
+    name: "swwww",
+    age: undefined
   };
-
   const schema = object({
-    name: string().optional(),
+    name: string().optional().minLength(2).maxLength(4),
     age: number().optional(),
     detail: object({
       firstName: number().optional(),
       lastName: number().optional()
     }).optional(),
-    friends: list(object({name: string(), age: number()})).minLength(3)
-  }).minLength(1);
+    friends: list(object({ name: string(), age: number() })).optional()
+  })
   const { error, value } = schema.validate(payload);
   console.log(error);
   console.log(value);
-  
-  
+  const s = string();
+  const r = s.validate('s')
+  console.log(r)
+
 }
 
 main();
