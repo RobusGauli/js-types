@@ -5,7 +5,6 @@
  
  */
 
-const number = primitiveType("number");
 const boolean = primitiveType("boolean");
 const symbol = primitiveType("symbol");
 
@@ -72,6 +71,146 @@ function primitiveType(type) {
   };
 }
 
+function any(args) {
+  if (getType(args) !== "array") {
+    throw new TypeError("Must be of type number");
+  }
+
+  return args.reduce((acc, val) => acc || val, false);
+}
+
+function convertToInteger(value) {
+  // value might be string i.e parsable number, integer, float 
+  return Math.round(parseFloat(value));
+}
+
+function convertToFloat(value, decimalPlaces) {
+  // value might be string i.e parsable fnumber, integer, float
+  console.log('h')
+  return parseFloat(parseFloat(value).toFixed(decimalPlaces))
+}
+
+function checkForString(value) {
+  let dotCount = 0;
+  const codePointsFlag = Object.values(value).map((_, index) => {
+    const codePoint = value.codePointAt(index);
+    if (codePoint === 46) {
+      dotCount++;
+    }
+    return (codePoint >= 48 && codePoint <= 57) || codePoint === 46
+      ? false
+      : true;
+  });
+
+  if (any(codePointsFlag)) {
+    return typeError("number", "string");
+  }
+  // also check for ".34." that is more than one "."
+  if (dotCount > 1) {
+    return typeError('number', 'string');
+  }
+  return success(value);
+}
+
+function number() {
+  return {
+    _type: "number",
+    _optional: false,
+    _min: null,
+    _max: null,
+    _toFloat: false,
+    _toInteger: false,
+    _decimalPlaces: null,
+    validate: function(payload) {
+      if (this._optional && (payload === undefined || payload === null)) {
+        return success(payload);
+      }
+
+      if (getType(payload) === "string") {
+        //
+        const includeStringValidation = checkForString(payload);
+        if (includeStringValidation.error) {
+          return includeStringValidation;
+        }
+      }
+      const parsableNumber = parseFloat(payload);
+      const value = primitiveTypeCheck(parsableNumber, this._type);
+      if (value.error) {
+        return value;
+      }
+
+      if (this._min !== null || this._max !== null) {
+        const rangeResult = rangeCheck(
+          parsableNumber,
+          {
+            min: this._min,
+            max: this._max
+          },
+          this._type
+        );
+        if (rangeResult.error) {
+          return rangeResult;
+        }
+      }
+      let convertedPayload = payload;
+      
+      if (this._toInteger) {
+        convertedPayload = convertToInteger(payload);
+      } else if (this._toFloat) {
+        convertedPayload = convertToFloat(payload, this._decimalPlaces);
+      }
+      return success(convertedPayload);
+    },
+    optional: function() {
+      this._optional = true;
+      return this;
+    },
+    max: function(value) {
+      if (getType(value) !== "number") {
+        throw new TypeError(`${value} must be of type number.`);
+      }
+      if (this._min !== null && value <= this._min) {
+        throw new Error(
+          `Max value ${value} must be greater than min value ${this._min}`
+        );
+      }
+      this._max = value;
+      return this;
+    },
+    min: function(value) {
+      if (getType(value) !== "number") {
+        throw new TypeError(`${value} must be of type number.`);
+      }
+      if (this._max !== null && value >= this._max) {
+        throw new Error(
+          `Min value ${value} must be less than max value ${this._max}`
+        );
+      }
+      this._min = value;
+      return this;
+    },
+    toInteger: function() {
+      // check to see if _toFloat is true
+      if (this._toFloat) {
+        throw new Error('Invalid Conversion scheme. Cannot be both float and integer.')
+      }
+      this._toInteger = true;
+      return this;
+    },
+    toFloat: function(decimalPlaces=3) {
+      if (this._toInteger) {
+          throw new Error('Invalid conversion scheme. Cannot be both integer and float.');
+      }
+      if (getType(decimalPlaces) !== 'number') {
+        throw new TypeError('Invalid argument to function "toFloat".');
+      }
+      this._toFloat = true;
+      this._decimalPlaces = decimalPlaces;
+      return this;
+    }
+
+  };
+}
 function string() {
   return {
     _type: "string",
@@ -111,6 +250,7 @@ function string() {
     ...LengthMixins
   };
 }
+
 function object(validationSchema) {
   return {
     _type: "object",
@@ -184,6 +324,7 @@ function all(args) {
 
   return args.reduce((acc, val) => acc && val, true);
 }
+
 function lengthError(type, lengthSchema, minFailed) {
   if (minFailed) {
     return {
@@ -197,6 +338,36 @@ function lengthError(type, lengthSchema, minFailed) {
   };
 }
 
+function rangeError(type, rangeSchema, minFailed) {
+  if (minFailed) {
+    return {
+      error: `${type} can have min value of ${rangeSchema.min}.`,
+      value: null
+    };
+  }
+  return {
+    error: `${type} can have max value of ${rangeSchema.max}.`,
+    value: null
+  };
+}
+
+// Range check for number
+function rangeCheck(value, rangeSchema, type) {
+  if (typeof value !== "number") {
+    throw new TypeError(`${value} must be of type number.`);
+  }
+  const { min, max } = rangeSchema;
+  if (min !== null && getType(min) === "number" && value < min) {
+    return rangeError(type, rangeSchema, true);
+  }
+
+  if (max !== null && getType(max) === "number" && value > max) {
+    return rangeError(type, rangeSchema, false);
+  }
+  return success(value);
+}
+
+// length check for string/array
 function lengthCheck(value, lengthSchema, type) {
   if (!Array.isArray(value)) {
     throw new TypeError(`${value} must be of type Array.`);
@@ -314,27 +485,35 @@ function list(validationSchema) {
 }
 
 function main() {
-  // here we validate the js objects types
-  const payload = {
-    name: "swwww",
-    age: undefined
-  };
-  const schema = object({
-    name: string().optional().minLength(2).maxLength(4),
-    age: number().optional(),
-    detail: object({
-      firstName: number().optional(),
-      lastName: number().optional()
-    }).optional(),
-    friends: list(object({ name: string(), age: number() })).optional()
-  })
-  const { error, value } = schema.validate(payload);
-  console.log(error);
-  console.log(value);
-  const s = string();
-  const r = s.validate('s')
-  console.log(r)
+  //  here we validate the js objects types
+  // const payload = {
+  //   name: "swww",
+  //   age: 10,
+  //   friends: [{name:'asd', age: 2}]
+  // };
+  // const schema = object({
+  //   detail: object({
+  //     firstName: number().optional(),
+  //     lastName: number().optional()
+  //   }).optional(),
+  //   friends: list(object({ name: string(), age: number() })).optional().maxLength(2)
+  // }).maxLength(3);
 
+  // const f = list(object({name: string().minLength(2)})).minLength(2).maxLength(3);
+
+  // const { error, value } = schema.validate(payload);
+  // console.log(error);
+  // console.log(value);
+  // const s = string();
+  // const r = s.validate("s");
+  // console.log(r);
+
+  const n = number()
+    .max(10)
+    .min(2)
+    .optional()
+  const { error, value } = n.validate("3.3123123");
+  console.log(error, value);
 }
 
 main();
