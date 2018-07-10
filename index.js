@@ -1,8 +1,7 @@
 /**
- * index.js
+ * index.js 
  * ~~~~~~~~~~~
  * This module provides the helper functions to validate your primitives in JS.
- 
  */
 
 const boolean = primitiveType("boolean");
