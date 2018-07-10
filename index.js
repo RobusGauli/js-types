@@ -4,12 +4,19 @@
  * This module provides the helper functions to validate your primitives in JS.
  */
 
+
 const boolean = primitiveType("boolean");
+
 const symbol = primitiveType("symbol");
+
 const number = () => new NumberState();
+
 const string = () => new StringState();
+
 const object = validationSchema => new ObjectState(validationSchema);
+
 const list = validationSchema => new ListState(validationSchema);
+
 const any = () => new AnyState();
 
 /**
